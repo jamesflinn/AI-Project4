@@ -48,7 +48,7 @@ public class RLAgent extends Agent {
     /**
      * Your Q-function weights.
      */
-    public Double[] weights;
+    public double[] weights;
 
     /**
      * These variables are set for you according to the assignment definition. You can change them,
@@ -81,7 +81,7 @@ public class RLAgent extends Agent {
             weights = loadWeights();
         } else {
             // initialize weights to random values between -1 and 1
-            weights = new Double[NUM_FEATURES];
+            weights = new double[NUM_FEATURES];
             for (int i = 0; i < weights.length; i++) {
                 weights[i] = random.nextDouble() * 2 - 1;
             }
@@ -339,23 +339,29 @@ public class RLAgent extends Agent {
      * @return The current reward
      */
     public double calculateReward(State.StateView stateView, History.HistoryView historyView, int footmanId) {
+        double reward = -0.1;
+
         for (DamageLog damageLogs : historyView.getDamageLogs(stateView.getTurnNumber() - 1)) {
+            // Footman is being attacked
             if (footmanId == damageLogs.getDefenderID()) {
-                // TODO: Reward when footman takes damage
                 if (footmanDied(stateView, historyView, footmanId)) {
-                    // TODO: Do stuff when the footman dies
+                    reward -= 100;
                 }
+
+                reward -= damageLogs.getDamage();
             }
 
+            // Footman is attacking
             if (footmanId == damageLogs.getAttackerID()) {
-                // TODO: Reward when footman deals damage
                 if (footmanDied(stateView, historyView, damageLogs.getDefenderID())) {
-                    // TODO: Do stuff when the other footman dies
+                    reward += 100;
                 }
+
+                reward += damageLogs.getDamage();
             }
         }
 
-        return 0;
+        return reward;
     }
 
     /**
@@ -392,7 +398,8 @@ public class RLAgent extends Agent {
                              History.HistoryView historyView,
                              int attackerId,
                              int defenderId) {
-        return 0;
+        double [] features = calculateFeatureVector(stateView, historyView, attackerId, defenderId);
+        return dotProduct(weights, features);
     }
 
     /**
@@ -474,7 +481,7 @@ public class RLAgent extends Agent {
      *
      * @param weights Array of weights
      */
-    public void saveWeights(Double[] weights) {
+    public void saveWeights(double[] weights) {
         File path = new File("agent_weights/weights.txt");
         // create the directories if they do not already exist
         path.getAbsoluteFile().getParentFile().mkdirs();
@@ -502,7 +509,7 @@ public class RLAgent extends Agent {
      *
      * @return The array of weights
      */
-    public Double[] loadWeights() {
+    public double[] loadWeights() {
         File path = new File("agent_weights/weights.txt");
         if (!path.exists()) {
             System.err.println("Failed to load weights. File does not exist");
@@ -518,7 +525,11 @@ public class RLAgent extends Agent {
             }
             reader.close();
 
-            return weights.toArray(new Double[weights.size()]);
+            double[] newWeights = new double[weights.size()];
+            for (int i = 0; i < weights.size(); i++) {
+                newWeights[i] = weights.get(i);
+            }
+            return newWeights;
         } catch(IOException ex) {
             System.err.println("Failed to load weights from file. Reason: " + ex.getMessage());
         }
