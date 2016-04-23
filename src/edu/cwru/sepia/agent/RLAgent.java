@@ -1,5 +1,6 @@
 package edu.cwru.sepia.agent;
 
+import com.sun.glass.ui.EventLoop;
 import edu.cwru.sepia.action.Action;
 import edu.cwru.sepia.action.ActionFeedback;
 import edu.cwru.sepia.action.ActionResult;
@@ -28,7 +29,6 @@ public class RLAgent extends Agent {
      */
     private List<Integer> myFootmen;
     private List<Integer> enemyFootmen;
-
     private List<Action> currentActions;
 
     /**
@@ -155,6 +155,17 @@ public class RLAgent extends Agent {
      */
     @Override
     public Map<Integer, Action> middleStep(State.StateView stateView, History.HistoryView historyView) {
+
+        // update the weights
+        double reward = 0;
+        for (int footmanID : myFootmen) {
+            reward = calculateReward(stateView, historyView, footmanID);
+        }
+
+        for (int footmanID : myFootmen) {
+            // NOT SURE IF I SHOULD BE CALCULATING THE FEATURE VECTOR HERE
+            updateWeights(weights, calculateFeatureVector(), reward, stateView, historyView, footmanID);
+        }
 
         Map<Integer, Action> actions = new HashMap<>();
 
@@ -293,6 +304,11 @@ public class RLAgent extends Agent {
             // do policy stuff
             // lets attack the closest footman to this one
 
+            for (int enemyID : enemyFootmen) {
+
+                double[] featureVector = calculateFeatureVector(stateView, historyView, attackerId, enemyID);
+            }
+
             int minDist = 10000;
 
             for (Integer enemyID : enemyFootmen) {
@@ -426,25 +442,29 @@ public class RLAgent extends Agent {
                                            int attackerId,
                                            int defenderId) {
 
-        double[] featureVector = new double[3];
+        double[] featureVector = new double[4];
         featureVector[0] = 1;
 
-        // how many other footmen are attacking e?
         for (Action action : currentActions) {
             if (action instanceof TargetedAction) {
                 TargetedAction targeted = (TargetedAction) action;
 
+                // how many other footmen are attacking e?
                 if (targeted.getTargetId() == defenderId) {
                     featureVector[1]++;
                 }
 
+                // is e attacking me?
                 if (targeted.getUnitId() == defenderId && targeted.getTargetId() == attackerId) {
                     featureVector[2] = 5;
                 }
+
+                // is e the closest enemy?
+                if (defenderId == getClosestEnemy(attackerId, stateView,historyView)) {
+                    featureVector[3] = 10;
+                }
             }
         }
-
-        // is e an enemy that is attacking me?
 
         return featureVector;
     }
@@ -612,6 +632,28 @@ public class RLAgent extends Agent {
                 currentActions.add(result.getAction());
             }
         }
+    }
+
+    /**
+     * returns the closest enemyID to the given footman
+     * @param footman     the footman we are looking from
+     * @param stateView   the current state
+     * @param historyView the history
+     * @return the ID of the closest enemy
+     */
+    private int getClosestEnemy(int footman, State.StateView stateView, History.HistoryView historyView) {
+
+        int closestEnemy = enemyFootmen[0];
+        int closestDistance = 10000;
+        int enemyDistance;
+        for (int enemy : enemyFootmen) {
+            enemyDistance = chebyshev(stateView.getUnit(footman), stateView.getUnit(enemy));
+            if (enemyDistance < closestDistance) {
+                closestDistance = enemyDistance;
+                closestEnemy = enemy;
+            }
+        }
+        return closestEnemy;
     }
 
     @Override
