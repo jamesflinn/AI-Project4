@@ -360,9 +360,14 @@ public class RLAgent extends Agent {
      * @param historyView the history
      */
     private void updateFootmenList(List<Integer> footmen, State.StateView stateView, History.HistoryView historyView) {
-        for(DeathLog deathLog : historyView.getDeathLogs(stateView.getTurnNumber() -1)) {
+
+        for(DeathLog deathLog : historyView.getDeathLogs(stateView.getTurnNumber() - 1)) {
             if (footmen.contains(deathLog.getDeadUnitID())) {
-                footmen.remove(deathLog.getDeadUnitID());
+                for (int i = 0; i < footmen.size(); i++) {
+                    if (footmen.get(i) == deathLog.getDeadUnitID()) {
+                        footmen.remove(i);
+                    }
+                }
             }
         }
     }

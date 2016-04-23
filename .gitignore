@@ -1,6 +1,7 @@
 .idea/
 out/
 saves/
+agent_weights/
 
 .DS_STORE
 *.iml
