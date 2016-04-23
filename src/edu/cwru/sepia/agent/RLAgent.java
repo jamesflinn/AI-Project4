@@ -154,11 +154,11 @@ public class RLAgent extends Agent {
     @Override
     public Map<Integer, Action> middleStep(State.StateView stateView, History.HistoryView historyView) {
 
+        Map<Integer, Action> actions = new HashMap<>();
 
-        // check the deathlogs
-        for (DeathLog deathLog : historyView.getDeathLogs((stateView.getTurnNumber() - 1))) {
-            System.out.println("Player: " + deathLog.getController() + " unit: " + deathLog.getDeadUnitID());
-        }
+        // remove dead footmen
+        updateFootmenList(myFootmen, stateView, historyView);
+        updateFootmenList(enemyFootmen, stateView, historyView);
 
         // check for completed actions here
         Map<Integer, ActionResult> actionResults = historyView.getCommandFeedback(playernum, stateView.getTurnNumber() - 1);
@@ -166,9 +166,12 @@ public class RLAgent extends Agent {
             System.out.println(result.toString());
         }
 
-        updateFootmenList(myFootmen, stateView, historyView);
-        updateFootmenList(enemyFootmen, stateView, historyView);
-        return null;
+        // select actions for all the footmen
+        for (int footmanID : myFootmen) {
+            Action action = Action.createCompoundAttack(footmanID, selectAction(stateView, historyView, footmanID));
+            actions.put(footmanID, action);
+        }
+        return actions;
     }
 
     /**
@@ -352,7 +355,9 @@ public class RLAgent extends Agent {
 
     /**
      * Removes any footmen based on death.
-     * @param footmen the footmen list being updated
+     * @param footmen     the footmen list being updated
+     * @param stateView   the current state
+     * @param historyView the history
      */
     private void updateFootmenList(List<Integer> footmen, State.StateView stateView, History.HistoryView historyView) {
         for(DeathLog deathLog : historyView.getDeathLogs(stateView.getTurnNumber() -1)) {
