@@ -324,23 +324,29 @@ public class RLAgent extends Agent {
      * @return The current reward
      */
     public double calculateReward(State.StateView stateView, History.HistoryView historyView, int footmanId) {
+        double reward = -0.1;
+
         for (DamageLog damageLogs : historyView.getDamageLogs(stateView.getTurnNumber() - 1)) {
+            // Footman is being attacked
             if (footmanId == damageLogs.getDefenderID()) {
-                // TODO: Reward when footman takes damage
                 if (footmanDied(stateView, historyView, footmanId)) {
-                    // TODO: Do stuff when the footman dies
+                    reward -= 100;
                 }
+
+                reward -= damageLogs.getDamage();
             }
 
+            // Footman is attacking
             if (footmanId == damageLogs.getAttackerID()) {
-                // TODO: Reward when footman deals damage
                 if (footmanDied(stateView, historyView, damageLogs.getDefenderID())) {
-                    // TODO: Do stuff when the other footman dies
+                    reward += 100;
                 }
+
+                reward += damageLogs.getDamage();
             }
         }
 
-        return 0;
+        return reward;
     }
 
     /**
