@@ -152,8 +152,21 @@ public class RLAgent extends Agent {
      */
     @Override
     public Map<Integer, Action> middleStep(State.StateView stateView, History.HistoryView historyView) {
-        updateFootmenList(myFootmen);
-        updateFootmenList(enemyFootmen);
+
+
+        // check the deathlogs
+        for (DeathLog deathLog : historyView.getDeathLogs((stateView.getTurnNumber() - 1))) {
+            System.out.println("Player: " + deathLog.getController() + " unit: " + deathLog.getDeadUnitID());
+        }
+
+        // check for completed actions here
+        Map<Integer, ActionResult> actionResults = historyView.getCommandFeedback(playernum, stateView.getTurnNumber() - 1);
+        for(ActionResult result : actionResults.values()) {
+            System.out.println(result.toString());
+        }
+
+        updateFootmenList(myFootmen, stateView, historyView);
+        updateFootmenList(enemyFootmen, stateView, historyView);
         return null;
     }
 
