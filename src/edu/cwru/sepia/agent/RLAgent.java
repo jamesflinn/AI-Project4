@@ -29,6 +29,8 @@ public class RLAgent extends Agent {
     private List<Integer> myFootmen;
     private List<Integer> enemyFootmen;
 
+    private List<Action> currentActions;
+
     /**
      * Convenience variable specifying enemy agent number. Use this whenever referring
      * to the enemy agent. We will make sure it is set to the proper number when testing your code.
@@ -159,6 +161,7 @@ public class RLAgent extends Agent {
         // remove dead footmen
         updateFootmenList(myFootmen, stateView, historyView);
         updateFootmenList(enemyFootmen, stateView, historyView);
+        updateActions(stateView, historyView);
 
         if (eventOccured(stateView, historyView)) {
             System.out.println("Event occured");
@@ -171,11 +174,10 @@ public class RLAgent extends Agent {
 
         } else {
             // No event occured so find lazy footmen and put them to work
-            Map<Integer, ActionResult> actionResults = historyView.getCommandFeedback(playernum, stateView.getTurnNumber() - 1);
             List<Integer> workingUnits = new ArrayList<>();
 
-            for (ActionResult result : actionResults.values()) {
-                workingUnits.add(result.getAction().getUnitId());
+            for (Action action : currentActions) {
+                workingUnits.add(action.getUnitId());
             }
 
             for (int footmanID : myFootmen) {
@@ -413,17 +415,38 @@ public class RLAgent extends Agent {
      * from 0 in the Q-function. The other features are up to you. Many are suggested in the assignment
      * description.
      *
-     * @param stateView Current state of the SEPIA game
+     * @param stateView   Current state of the SEPIA game
      * @param historyView History of the game up until this turn
-     * @param attackerId Your footman. The one doing the attacking.
-     * @param defenderId An enemy footman. The one you are considering attacking.
-     * @return The array of feature function outputs.
+     * @param attackerId  Your footman. The one doing the attacking.
+     * @param defenderId  An enemy footman. The one you are considering attacking.
+     * @return            The array of feature function outputs.
      */
     public double[] calculateFeatureVector(State.StateView stateView,
                                            History.HistoryView historyView,
                                            int attackerId,
                                            int defenderId) {
-        return null;
+
+        double[] featureVector = new double[3];
+        featureVector[0] = 1;
+
+        // how many other footmen are attacking e?
+        for (Action action : currentActions) {
+            if (action instanceof TargetedAction) {
+                TargetedAction targeted = (TargetedAction) action;
+
+                if (targeted.getTargetId() == defenderId) {
+                    featureVector[1]++;
+                }
+
+                if (targeted.getUnitId() == defenderId && targeted.getTargetId() == attackerId) {
+                    featureVector[2] = 5;
+                }
+            }
+        }
+
+        // is e an enemy that is attacking me?
+
+        return featureVector;
     }
 
     /**
@@ -572,6 +595,23 @@ public class RLAgent extends Agent {
         }
 
         return false;
+    }
+
+    /**
+     * updates the list of actions we are maintaining
+     * @param stateView   the current state
+     * @param historyView the history
+     */
+    public void updateActions(State.StateView stateView, History.HistoryView historyView) {
+
+        currentActions = new ArrayList<>();
+
+        Map<Integer, ActionResult> actionResults = historyView.getCommandFeedback(playernum, stateView.getTurnNumber() - 1);
+        for (ActionResult result : actionResults.values()) {
+            if (result.equals(ActionFeedback.COMPLETED)) {
+                currentActions.add(result.getAction());
+            }
+        }
     }
 
     @Override
