@@ -152,6 +152,8 @@ public class RLAgent extends Agent {
      */
     @Override
     public Map<Integer, Action> middleStep(State.StateView stateView, History.HistoryView historyView) {
+        updateFootmenList(myFootmen);
+        updateFootmenList(enemyFootmen);
         return null;
     }
 
@@ -232,7 +234,39 @@ public class RLAgent extends Agent {
      * @return The current reward
      */
     public double calculateReward(State.StateView stateView, History.HistoryView historyView, int footmanId) {
+        for (DamageLog damageLogs : historyView.getDamageLogs(stateView.getTurnNumber() - 1)) {
+            if (footmanId == damageLogs.getDefenderID()) {
+                // TODO: Reward when footman takes damage
+                if (footmanDied(stateView, historyView, footmanId)) {
+                    // TODO: Do stuff when the footman dies
+                }
+            }
+
+            if (footmanId == damageLogs.getAttackerID()) {
+                // TODO: Reward when footman deals damage
+                if (footmanDied(stateView, historyView, damageLogs.getDefenderID())) {
+                    // TODO: Do stuff when the other footman dies
+                }
+            }
+        }
+
         return 0;
+    }
+
+    /**
+     * Returns whether the given footman died.
+     * @param stateView The current state of the game.
+     * @param historyView History of the episode up until this turn.
+     * @param footmanId The footman ID you are looking for the reward from.
+     * @return true if the footman died
+     */
+    private boolean footmanDied(State.StateView stateView, History.HistoryView historyView, int footmanId) {
+        for(DeathLog deathLog : historyView.getDeathLogs(stateView.getTurnNumber() -1)) {
+            if (footmanId == deathLog.getDeadUnitID()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -278,6 +312,18 @@ public class RLAgent extends Agent {
                                            int attackerId,
                                            int defenderId) {
         return null;
+    }
+
+    /**
+     * Removes any footmen based on death.
+     * @param footmen the footmen list being updated
+     */
+    private void updateFootmenList(List<Integer> footmen, State.StateView stateView, History.HistoryView historyView) {
+        for(DeathLog deathLog : historyView.getDeathLogs(stateView.getTurnNumber() -1)) {
+            if (footmen.contains(deathLog.getDeadUnitID())) {
+                footmen.remove(deathLog.getDeadUnitID());
+            }
+        }
     }
 
     /**
