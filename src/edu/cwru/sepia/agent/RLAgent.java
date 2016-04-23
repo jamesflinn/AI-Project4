@@ -40,7 +40,7 @@ public class RLAgent extends Agent {
     /**
      * Set this to whatever size your feature vector is.
      */
-    public static final int NUM_FEATURES = 5;
+    public static final int NUM_FEATURES = 4;
 
     /** Use this random number generator for your epsilon exploration. When you submit we will
      * change this seed so make sure that your agent works for more than the default seed.
@@ -156,26 +156,28 @@ public class RLAgent extends Agent {
     @Override
     public Map<Integer, Action> middleStep(State.StateView stateView, History.HistoryView historyView) {
 
+        // remove dead footmen
+        updateFootmenList(myFootmen, stateView, historyView);
+        updateFootmenList(enemyFootmen, stateView, historyView);
+        updateActions(stateView, historyView);
+        Map<Integer, Action> actions = new HashMap<>();
+
         // update the weights
         double reward = 0;
         for (int footmanID : myFootmen) {
             reward = calculateReward(stateView, historyView, footmanID);
         }
 
-        for (int footmanID : myFootmen) {
-            // NOT SURE IF I SHOULD BE CALCULATING THE FEATURE VECTOR HERE
-            updateWeights(weights, calculateFeatureVector(), reward, stateView, historyView, footmanID);
-        }
-
-        Map<Integer, Action> actions = new HashMap<>();
-
-        // remove dead footmen
-        updateFootmenList(myFootmen, stateView, historyView);
-        updateFootmenList(enemyFootmen, stateView, historyView);
-        updateActions(stateView, historyView);
-
         if (eventOccured(stateView, historyView)) {
             System.out.println("Event occured");
+
+            for (int footmanID : myFootmen) {
+                // TODO: NOT SURE IF I SHOULD BE CALCULATING THE FEATURE VECTOR HERE
+                // WE NEED THE OLD FEATURES
+                for (int enemyID : enemyFootmen) {
+                    updateWeights(weights, calculateFeatureVector(stateView, historyView, footmanID, enemyID), reward, stateView, historyView, footmanID);
+                }
+            }
 
             // All footmen get a new action
             for (int footmanID : myFootmen) {
@@ -185,19 +187,15 @@ public class RLAgent extends Agent {
 
         } else {
             // No event occured so find lazy footmen and put them to work
-            List<Integer> workingUnits = new ArrayList<>();
+            Map<Integer, ActionResult> actionResults = historyView.getCommandFeedback(playernum, stateView.getTurnNumber() - 1);
 
-            for (Action action : currentActions) {
-                workingUnits.add(action.getUnitId());
-            }
-
-            for (int footmanID : myFootmen) {
-                if (!workingUnits.contains(footmanID)) {
-                    Action action = Action.createCompoundAttack(footmanID, selectAction(stateView, historyView, footmanID));
-                    actions.put(footmanID, action);
+            for(ActionResult result : actionResults.values()) {
+                int unitID = result.getAction().getUnitId();
+                if (result.getFeedback().equals(ActionFeedback.COMPLETED) && myFootmen.contains(unitID)) {
+                    Action action = Action.createCompoundAttack(unitID, selectAction(stateView, historyView, unitID));
+                    actions.put(unitID, action);
                 }
             }
-
         }
         return actions;
     }
@@ -256,6 +254,8 @@ public class RLAgent extends Agent {
     private double dotProduct(double[] weights, double[] features) {
         double product = 0;
 
+        System.out.println("dotProduct:");
+        System.out.printf("\t%d weights\n\t%d features", weights.length, features.length);
         for (int i = 0; i < weights.length; i++) {
             product += (weights[i] * features[i]);
         }
@@ -301,22 +301,17 @@ public class RLAgent extends Agent {
             // do random shit
             victim = (int)(Math.random() * enemyFootmen.size());
         } else {
-            // do policy stuff
-            // lets attack the closest footman to this one
 
+            double maxQVal = Integer.MIN_VALUE;
+
+            // loop through all of the enemy footmen and figure out which one to attack
             for (int enemyID : enemyFootmen) {
 
                 double[] featureVector = calculateFeatureVector(stateView, historyView, attackerId, enemyID);
-            }
-
-            int minDist = 10000;
-
-            for (Integer enemyID : enemyFootmen) {
-
-                int distance = chebyshev(attacker, stateView.getUnit(enemyID));
-                if (distance < minDist) {
-                    minDist = distance;
+                double newQVal = calcQValue(stateView, historyView, attackerId, enemyID);
+                if (newQVal > maxQVal) {
                     victim = enemyID;
+                    maxQVal = newQVal;
                 }
             }
         }
@@ -643,7 +638,7 @@ public class RLAgent extends Agent {
      */
     private int getClosestEnemy(int footman, State.StateView stateView, History.HistoryView historyView) {
 
-        int closestEnemy = enemyFootmen[0];
+        int closestEnemy = enemyFootmen.get(0);
         int closestDistance = 10000;
         int enemyDistance;
         for (int enemy : enemyFootmen) {
