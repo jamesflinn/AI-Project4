@@ -160,16 +160,31 @@ public class RLAgent extends Agent {
         updateFootmenList(myFootmen, stateView, historyView);
         updateFootmenList(enemyFootmen, stateView, historyView);
 
-        // check for completed actions here
-        Map<Integer, ActionResult> actionResults = historyView.getCommandFeedback(playernum, stateView.getTurnNumber() - 1);
-        for(ActionResult result : actionResults.values()) {
-            System.out.println(result.toString());
-        }
+        if (eventOccured(stateView, historyView)) {
+            System.out.println("Event occured");
 
-        // select actions for all the footmen
-        for (int footmanID : myFootmen) {
-            Action action = Action.createCompoundAttack(footmanID, selectAction(stateView, historyView, footmanID));
-            actions.put(footmanID, action);
+            // All footmen get a new action
+            for (int footmanID : myFootmen) {
+                Action action = Action.createCompoundAttack(footmanID, selectAction(stateView, historyView, footmanID));
+                actions.put(footmanID, action);
+            }
+
+        } else {
+            // No event occured so find lazy footmen and put them to work
+            Map<Integer, ActionResult> actionResults = historyView.getCommandFeedback(playernum, stateView.getTurnNumber() - 1);
+            List<Integer> workingUnits = new ArrayList<>();
+
+            for (ActionResult result : actionResults.values()) {
+                workingUnits.add(result.getAction().getUnitId());
+            }
+
+            for (int footmanID : myFootmen) {
+                if (!workingUnits.contains(footmanID)) {
+                    Action action = Action.createCompoundAttack(footmanID, selectAction(stateView, historyView, footmanID));
+                    actions.put(footmanID, action);
+                }
+            }
+
         }
         return actions;
     }
@@ -523,6 +538,29 @@ public class RLAgent extends Agent {
         int deltaX = Math.abs(first.getXPosition() - second.getXPosition());
 
         return deltaX > deltaY ? deltaX : deltaY;
+    }
+
+    /**
+     * Returns if an event has occured
+     * @param stateView   the current state
+     * @param historyView the history
+     * @return            if an event has occured
+     */
+    public boolean eventOccured(State.StateView stateView, History.HistoryView historyView) {
+
+        // unit is killed
+        if (historyView.getDeathLogs(stateView.getTurnNumber() - 1).size() > 0) {
+            return true;
+        }
+
+        // friendly unit is hit
+        for (DamageLog damage : historyView.getDamageLogs(stateView.getTurnNumber() - 1)) {
+            if (myFootmen.contains(damage.getDefenderID())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override
