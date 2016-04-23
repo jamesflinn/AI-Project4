@@ -9,6 +9,7 @@ import edu.cwru.sepia.environment.model.history.DeathLog;
 import edu.cwru.sepia.environment.model.history.History;
 import edu.cwru.sepia.environment.model.state.State;
 import edu.cwru.sepia.environment.model.state.Unit;
+import edu.cwru.sepia.environment.model.state.Unit.UnitView;
 
 import java.io.*;
 import java.util.*;
@@ -210,7 +211,29 @@ public class RLAgent extends Agent {
      * @return The enemy footman ID this unit should attack
      */
     public int selectAction(State.StateView stateView, History.HistoryView historyView, int attackerId) {
-        return -1;
+
+        Unit.UnitView attacker = stateView.getUnit(attackerId);
+        int victim  = enemyFootmen.get(0);
+
+        if (Math.random() < epsilon) {
+            // do random shit
+            victim = (int)(Math.random() * enemyFootmen.size());
+        } else {
+            // do policy stuff
+            // lets attack the closest footman to this one
+
+            int minDist = 10000;
+
+            for (Integer enemyID : enemyFootmen) {
+
+                int distance = chebyshev(attacker, stateView.getUnit(enemyID));
+                if (distance < minDist) {
+                    minDist = distance;
+                    victim = enemyID;
+                }
+            }
+        }
+        return victim;
     }
 
     /**
@@ -274,7 +297,7 @@ public class RLAgent extends Agent {
      * @return true if the footman died
      */
     private boolean footmanDied(State.StateView stateView, History.HistoryView historyView, int footmanId) {
-        for(DeathLog deathLog : historyView.getDeathLogs(stateView.getTurnNumber() -1)) {
+        for(DeathLog deathLog : historyView.getDeathLogs(stateView.getTurnNumber() - 1)) {
             if (footmanId == deathLog.getDeadUnitID()) {
                 return true;
             }
@@ -424,6 +447,21 @@ public class RLAgent extends Agent {
             System.err.println("Failed to load weights from file. Reason: " + ex.getMessage());
         }
         return null;
+    }
+
+    /**
+     * returns the chebyshev distance between two units
+     *
+     * @param first  The first unit
+     * @param second The second unit
+     * @return       The chebyshev distance between the first and second
+     */
+    public int chebyshev(UnitView first, UnitView second) {
+
+        int deltaY = Math.abs(first.getYPosition() - second.getYPosition());
+        int deltaX = Math.abs(first.getXPosition() - second.getXPosition());
+
+        return deltaX > deltaY ? deltaX : deltaY;
     }
 
     @Override
