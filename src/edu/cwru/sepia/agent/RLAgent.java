@@ -200,8 +200,59 @@ public class RLAgent extends Agent {
      * @param footmanId The footman we are updating the weights for
      * @return The updated weight vector.
      */
-    public double[] updateWeights(double[] oldWeights, double[] oldFeatures, double totalReward, State.StateView stateView, History.HistoryView historyView, int footmanId) {
-        return null;
+    public double[] updateWeights(double[] oldWeights,
+                                  double[] oldFeatures,
+                                  double totalReward,
+                                  State.StateView stateView,
+                                  History.HistoryView historyView,
+                                  int footmanId) {
+
+        double[] newWeights = new double[oldWeights.length];
+
+        for (int i = 0; i < newWeights.length; i++) {
+            double oldQValue =  dotProduct(oldWeights, oldFeatures);
+            double currentQValue = findMaxQValue(stateView, historyView, footmanId);
+
+            newWeights[i] = oldWeights[i] + learningRate * (totalReward + (gamma * currentQValue) - oldQValue) * oldFeatures[i];
+        }
+
+        return newWeights;
+    }
+
+    /**
+     * Calculates the dot product of weights and features.
+     * @param weights the weight vector
+     * @param features the feature vector
+     * @return the dot product
+     */
+    private double dotProduct(double[] weights, double[] features) {
+        double product = 0;
+
+        for (int i = 0; i < weights.length; i++) {
+            product += (weights[i] * features[i]);
+        }
+
+        return product;
+    }
+
+    /**
+     * Finds the maximum Q value for all enemy ids
+     * @param stateView Current state of the game.
+     * @param historyView History of the game up until this point
+     * @param footmanId The footman we are updating the weights for
+     * @return the maximum Q value.
+     */
+    private double findMaxQValue(State.StateView stateView, History.HistoryView historyView, int footmanId) {
+        double maxQValue = 0;
+
+        for (int enemyId : enemyFootmen) {
+            double newQValue = calcQValue(stateView, historyView, footmanId, enemyId);
+            if (newQValue > maxQValue) {
+                maxQValue = newQValue;
+            }
+        }
+
+        return maxQValue;
     }
 
     /**
