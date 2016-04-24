@@ -208,6 +208,12 @@ public class RLAgent extends Agent {
             for (int footmanID : myFootmen) {
                 reward += calculateReward(stateView, historyView, footmanID);
             }
+            /*
+            System.out.printf("state:\n");
+            System.out.printf("\tenemy footmen: %d\n", enemyFootmen.size());
+            System.out.printf("\tfriendly footmen: %d\n", myFootmen.size());
+            System.out.printf("\treward: %f\n", reward);
+            */
             currentRewards.add(reward);
 
             // if we are in a testing episode then update the policy
@@ -275,7 +281,8 @@ public class RLAgent extends Agent {
             }
         }
 
-        // System.out.printf("episode %4d %4s\n", currentEpisode, myFootmen.size() > enemyFootmen.size() ? "won" : "lost");
+        //System.out.printf("episode %4d %4s\n", currentEpisode, myFootmen.size() > enemyFootmen.size() ? "won" : "lost");
+        //System.out.printf("\t%d events occured\n", currentRewards.size());
 
         if (myFootmen.size() > enemyFootmen.size()) {
             episodesWon++;
@@ -367,7 +374,7 @@ public class RLAgent extends Agent {
         Unit.UnitView attacker = stateView.getUnit(attackerId);
         int victim  = enemyFootmen.get(0);
 
-        if (Math.random() < epsilon) {
+        if (random.nextDouble() < epsilon) {
             // do random stuff
             int victimIndex = (int)(Math.random() * enemyFootmen.size());
             victim = enemyFootmen.get(victimIndex);
