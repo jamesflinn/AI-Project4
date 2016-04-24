@@ -133,6 +133,13 @@ public class RLAgent extends Agent {
         if (currentEpisode > numEpisodes) {
             System.out.printf("\ncurrent: %d total: %d\n", currentEpisode, numEpisodes);
             System.out.printf("Finished running... \nwon %f of games\nexiting\n", ((double) episodesWon / (double) numEpisodes));
+
+            try {
+                saveToCSV();
+            } catch (Exception e) {
+                System.out.println(":(");
+            }
+
             System.exit(0);
         }
 
@@ -260,6 +267,8 @@ public class RLAgent extends Agent {
     public void terminalStep(State.StateView stateView, History.HistoryView historyView) {
 
         currentEpisode++;
+        double sumRewards = sum(currentRewards);
+        allRewards.add(sumRewards);
 
         if (testingEpisode) {
             episodesTested++;
@@ -267,9 +276,7 @@ public class RLAgent extends Agent {
             episodesEvaluated++;
 
             // if we are evaluating then add the average to evaluation rewards
-            double sumRewards = sum(currentRewards);
             evaluationRewards.add(sumRewards);
-            allRewards.add(sumRewards);
 
             if (episodesEvaluated > 4) {
                 averageRewards.add(average(evaluationRewards));
@@ -838,6 +845,20 @@ public class RLAgent extends Agent {
         }
 
         return sum;
+    }
+
+    private void saveToCSV() throws IOException {
+        FileWriter fileWriter = new FileWriter("results.csv");
+        fileWriter.write("iteration, cumulative reward\n");
+
+        int i = 0;
+        for (double reward : allRewards) {
+            i++;
+            fileWriter.write(String.format("%d, %.5f\n", i, reward));
+        }
+
+        fileWriter.flush();
+        fileWriter.close();
     }
 
     @Override
