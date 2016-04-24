@@ -224,7 +224,7 @@ public class RLAgent extends Agent {
                     // TODO: NOT SURE IF I SHOULD BE CALCULATING THE FEATURE VECTOR HERE
                     // WE NEED THE OLD FEATURES
                     double[] featureValues = convertToPrimitiveArray(previousFeatureValues.get(footmanID));
-                    updateWeights(weights, featureValues, reward, stateView, historyView, footmanID);
+                    weights = updateWeights(weights, featureValues, reward, stateView, historyView, footmanID);
                 }
             }
 
@@ -278,7 +278,11 @@ public class RLAgent extends Agent {
 
             if (episodesEvaluated > 4) {
                 averageRewards.add(average(evaluationRewards));
+                evaluationRewards = new ArrayList<>();
                 printTestData(averageRewards);
+                for (double weight : weights) {
+                    System.out.printf("\t %f\n", weight);
+                }
             }
         }
 
@@ -320,6 +324,7 @@ public class RLAgent extends Agent {
             newWeights[i] = oldWeights[i] + learningRate * (totalReward + (gamma * currentQValue) - oldQValue) * oldFeatures[i];
         }
 
+        // System.out.printf("old: %s\nnew: %s\n", Arrays.toString(oldWeights), Arrays.toString(newWeights));
         return newWeights;
     }
 
@@ -375,7 +380,7 @@ public class RLAgent extends Agent {
         Unit.UnitView attacker = stateView.getUnit(attackerId);
         int victim  = enemyFootmen.get(0);
 
-        if (testingEpisode && random.nextDouble() < epsilon) {
+        if (random.nextDouble() < epsilon) {
             // do random stuff
             int victimIndex = (int)(Math.random() * enemyFootmen.size());
             victim = enemyFootmen.get(victimIndex);
@@ -395,6 +400,7 @@ public class RLAgent extends Agent {
         }
 
         double[] featureVector = calculateFeatureVector(stateView, historyView, attackerId,  victim);
+        //System.out.println(Arrays.toString(featureVector));
         previousFeatureValues.put(attackerId, convertToObjectArray(featureVector));
         return victim;
     }
@@ -519,7 +525,7 @@ public class RLAgent extends Agent {
                                            int defenderId) {
 
         double[] featureVector = new double[4];
-        featureVector[0] = 0;
+        featureVector[0] = .1;
 
         for (Action action : currentActions) {
             if (action instanceof TargetedAction) {
@@ -730,7 +736,7 @@ public class RLAgent extends Agent {
 
         Map<Integer, ActionResult> actionResults = historyView.getCommandFeedback(playernum, stateView.getTurnNumber() - 1);
         for (ActionResult result : actionResults.values()) {
-            if (result.equals(ActionFeedback.COMPLETED)) {
+            if (!result.equals(ActionFeedback.COMPLETED)) {
                 currentActions.add(result.getAction());
             }
         }
