@@ -59,9 +59,10 @@ public class RLAgent extends Agent {
     public double[] weights;
     private String[] featureNames = {"constant", "footmen attacking", "being attacked", "closest enemy", "health", "weakest enemy"};
 
+    private List<Double> allRewards        = new ArrayList<>();
     private List<Double> currentRewards    = new ArrayList<>();
-    private List<Double> evaluationRewards = new ArrayList<>();
     private List<Double> averageRewards    = new ArrayList<>();
+    private List<Double> evaluationRewards = new ArrayList<>();
 
     private Map<Integer, Double[]> previousFeatureValues = new HashMap<>();
 
@@ -127,7 +128,7 @@ public class RLAgent extends Agent {
 
         // we have run all the episodes
         if (currentEpisode > numEpisodes) {
-            System.out.printf("current: %d total: %d\n", currentEpisode, numEpisodes);
+            System.out.printf("\ncurrent: %d total: %d\n", currentEpisode, numEpisodes);
             System.out.printf("Finished running... \nwon %f of games\nexiting\n", ((double) episodesWon / (double) numEpisodes));
             System.exit(0);
         }
@@ -263,7 +264,9 @@ public class RLAgent extends Agent {
             episodesEvaluated++;
 
             // if we are evaluating then add the average to evaluation rewards
-            evaluationRewards.add(average(currentRewards));
+            double sumRewards = sum(currentRewards);
+            evaluationRewards.add(sumRewards);
+            allRewards.add(sumRewards);
 
             if (episodesEvaluated > 4) {
                 averageRewards.add(average(evaluationRewards));
