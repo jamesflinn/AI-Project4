@@ -26,7 +26,8 @@
 
 	<Player Id="1">
 		<AgentClass>
-			<ClassName>edu.cwru.sepia.agent.CombatAgent</ClassName>
+			<ClassName>edu.cwru.sepia.agent.LoserAgent</ClassName>
+			<Argument>1000</Argument>
 			<Argument>false</Argument> <!-- Verbosity of combat agent -->
 		</AgentClass>
 	</Player>

@@ -57,12 +57,15 @@ public class RLAgent extends Agent {
      * Your Q-function weights.
      */
     public double[] weights;
+    private double[] bestWeights;
     private String[] featureNames = {"constant", "footmen attacking", "being attacked", "closest enemy", "health", "weakest enemy"};
 
+    // Rewards
     private List<Double> allRewards        = new ArrayList<>();
     private List<Double> currentRewards    = new ArrayList<>();
     private List<Double> averageRewards    = new ArrayList<>();
     private List<Double> evaluationRewards = new ArrayList<>();
+    private double bestReward = 0;
 
     private Map<Integer, Double[]> previousFeatureValues = new HashMap<>();
 
@@ -274,6 +277,9 @@ public class RLAgent extends Agent {
                 printTestData(averageRewards);
                 for (int i = 0; i < weights.length; i++) {
                     System.out.printf("%-17s: %f\n", featureNames[i], weights[i]);
+                }
+                if (averageRewards.get(averageRewards.size()) > bestReward) {
+                    bestWeights = weights;
                 }
             }
         }
@@ -686,6 +692,25 @@ public class RLAgent extends Agent {
             System.err.println("Failed to load weights from file. Reason: " + ex.getMessage());
         }
         return null;
+    }
+
+    public void saveBestWeights(double[] weights) {
+        File path = new File("agent_weights/bestweights.data");
+        // create the directories if they do not already exist
+        path.getAbsoluteFile().getParentFile().mkdirs();
+
+        try {
+            // open a new file writer. Set append to false
+            BufferedWriter writer = new BufferedWriter(new FileWriter(path, false));
+
+            for (double weight : bestWeights) {
+                writer.write(String.format("%f\n", weight));
+            }
+            writer.flush();
+            writer.close();
+        } catch(IOException ex) {
+            System.err.println("Failed to write weights to file. Reason: " + ex.getMessage());
+        }
     }
 
     /**
