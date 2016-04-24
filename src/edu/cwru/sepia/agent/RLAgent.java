@@ -67,6 +67,8 @@ public class RLAgent extends Agent {
     private List<Double> evaluationRewards = new ArrayList<>();
     private List<Double> averageRewards    = new ArrayList<>();
 
+    private Map<Integer, Double[]> previousFeatureValues = new HashMap<>();
+
     /**
      * These variables are set for you according to the assignment definition. You can change them,
      * but it is not recommended. If you do change them please let us know and explain your reasoning for
@@ -221,9 +223,8 @@ public class RLAgent extends Agent {
                 for (int footmanID : myFootmen) {
                     // TODO: NOT SURE IF I SHOULD BE CALCULATING THE FEATURE VECTOR HERE
                     // WE NEED THE OLD FEATURES
-                    for (int enemyID : enemyFootmen) {
-                        weights = updateWeights(weights, calculateFeatureVector(stateView, historyView, footmanID, enemyID), reward, stateView, historyView, footmanID);
-                    }
+                    double[] featureValues = convertToPrimitiveArray(previousFeatureValues.get(footmanID));
+                    updateWeights(weights, featureValues, reward, stateView, historyView, footmanID);
                 }
             }
 
@@ -385,7 +386,6 @@ public class RLAgent extends Agent {
             // loop through all of the enemy footmen and figure out which one to attack
             for (int enemyID : enemyFootmen) {
 
-                double[] featureVector = calculateFeatureVector(stateView, historyView, attackerId, enemyID);
                 double newQVal = calcQValue(stateView, historyView, attackerId, enemyID);
                 if (newQVal > maxQVal) {
                     victim  = enemyID;
@@ -393,6 +393,9 @@ public class RLAgent extends Agent {
                 }
             }
         }
+
+        double[] featureVector = calculateFeatureVector(stateView, historyView, attackerId,  victim);
+        previousFeatureValues.put(attackerId, convertToObjectArray(featureVector));
         return victim;
     }
 
@@ -559,6 +562,32 @@ public class RLAgent extends Agent {
                 }
             }
         }
+    }
+
+    /**
+     * Converts double array to Double array
+     * @param array the double array
+     * @return the Double array
+     */
+    private Double[] convertToObjectArray(double[] array) {
+        Double[] newArray = new Double[array.length];
+        for (int i = 0; i < array.length; i++) {
+            newArray[i] = array[i];
+        }
+        return newArray;
+    }
+
+    /**
+     * Converts Double array to double array
+     * @param array the Double array
+     * @return the double array
+     */
+    private double[] convertToPrimitiveArray(Double[] array) {
+        double[] newArray = new double[array.length];
+        for (int i = 0; i < array.length; i++) {
+            newArray[i] = array[i];
+        }
+        return newArray;
     }
 
     /**
