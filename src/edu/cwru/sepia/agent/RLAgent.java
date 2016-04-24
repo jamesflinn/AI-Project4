@@ -24,6 +24,12 @@ public class RLAgent extends Agent {
      */
     public final int numEpisodes;
 
+    private int currentEpisode;
+    private int episodesTested;
+    private int episodesEvaluated;
+    private boolean testingEpisode;
+    private int episodesWon;
+
     /**
      * List of your footmen and your enemies footmen
      */
@@ -51,6 +57,10 @@ public class RLAgent extends Agent {
      * Your Q-function weights.
      */
     public double[] weights;
+
+    private List<Double> currentRewards    = new ArrayList<>();
+    private List<Double> evaluationRewards = new ArrayList<>();
+    private List<Double> averageRewards    = new ArrayList<>();
 
     /**
      * These variables are set for you according to the assignment definition. You can change them,
@@ -88,6 +98,12 @@ public class RLAgent extends Agent {
                 weights[i] = random.nextDouble() * 2 - 1;
             }
         }
+
+        currentEpisode = 1;
+        episodesTested = 0;
+        episodesEvaluated = 0;
+        episodesWon = 0;
+        testingEpisode = true;
     }
 
     /**
@@ -96,7 +112,21 @@ public class RLAgent extends Agent {
     @Override
     public Map<Integer, Action> initialStep(State.StateView stateView, History.HistoryView historyView) {
 
+        //System.out.printf("episode %4d is a %10s episode\n", currentEpisode, testingEpisode ? "testing" : "evaluation");
         // You will need to add code to check if you are in a testing or learning episode
+        if (episodesTested > 9) {
+            testingEpisode = false;
+            episodesTested = 0;
+        } else if (episodesEvaluated > 4) {
+            testingEpisode = true;
+            episodesEvaluated = 0;
+        }
+
+        // we have run all the episodes
+        if (currentEpisode > numEpisodes) {
+            System.out.printf("Finished running... \nwon %f of games\nexiting\n", ((double) episodesWon / (double) numEpisodes));
+            System.exit(0);
+        }
 
         // Find all of your units
         myFootmen = new LinkedList<>();
@@ -123,6 +153,8 @@ public class RLAgent extends Agent {
                 System.err.println("Unknown unit type: " + unitName);
             }
         }
+
+        currentRewards = new ArrayList<>();
 
         return middleStep(stateView, historyView);
     }
@@ -162,14 +194,15 @@ public class RLAgent extends Agent {
         updateActions(stateView, historyView);
         Map<Integer, Action> actions = new HashMap<>();
 
-        // update the weights
+        // calculate the rewards
         double reward = 0;
         for (int footmanID : myFootmen) {
             reward = calculateReward(stateView, historyView, footmanID);
         }
+        currentRewards.add(reward);
 
         if (eventOccured(stateView, historyView)) {
-            System.out.println("Event occured");
+            //System.out.println("Event occured");
 
             for (int footmanID : myFootmen) {
                 // TODO: NOT SURE IF I SHOULD BE CALCULATING THE FEATURE VECTOR HERE
@@ -180,6 +213,14 @@ public class RLAgent extends Agent {
             }
 
             // All footmen get a new action
+            for (int footmanID : myFootmen) {
+                Action action = Action.createCompoundAttack(footmanID, selectAction(stateView, historyView, footmanID));
+                actions.put(footmanID, action);
+            }
+
+        } else if (stateView.getTurnNumber() == 0) {
+
+            // First turn give everyone an action
             for (int footmanID : myFootmen) {
                 Action action = Action.createCompoundAttack(footmanID, selectAction(stateView, historyView, footmanID));
                 actions.put(footmanID, action);
@@ -209,7 +250,27 @@ public class RLAgent extends Agent {
     @Override
     public void terminalStep(State.StateView stateView, History.HistoryView historyView) {
 
-        // MAKE SURE YOU CALL printTestData after you finish a test episode.
+        currentEpisode++;
+
+        if (testingEpisode) {
+            episodesTested++;
+        } else {
+            episodesEvaluated++;
+
+            // if we are evaluating then add the average to evaluation rewards
+            evaluationRewards.add(average(currentRewards));
+
+            if (episodesEvaluated > 4) {
+                averageRewards.add(average(evaluationRewards));
+                printTestData(averageRewards);
+            }
+        }
+
+        // System.out.printf("episode %4d %4s\n", currentEpisode, myFootmen.size() > enemyFootmen.size() ? "won" : "lost");
+
+        if (myFootmen.size() > enemyFootmen.size()) {
+            episodesWon++;
+        }
 
         // Save your weights
         saveWeights(weights);
@@ -254,8 +315,8 @@ public class RLAgent extends Agent {
     private double dotProduct(double[] weights, double[] features) {
         double product = 0;
 
-        System.out.println("dotProduct:");
-        System.out.printf("\t%d weights\n\t%d features", weights.length, features.length);
+        //System.out.println("dotProduct:");
+        //System.out.printf("\t%d weights\n\t%d features", weights.length, features.length);
         for (int i = 0; i < weights.length; i++) {
             product += (weights[i] * features[i]);
         }
@@ -649,6 +710,20 @@ public class RLAgent extends Agent {
             }
         }
         return closestEnemy;
+    }
+
+    /**
+     * Calculates the average of a list of doubles
+     * @param numbers the list of doubles
+     * @return the average
+     */
+    private double average(List<Double> numbers) {
+        double average = 0;
+
+        for (double num : numbers) {
+            average += num;
+        }
+        return average / numbers.size();
     }
 
     @Override
