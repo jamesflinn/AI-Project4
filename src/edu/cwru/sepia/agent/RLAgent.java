@@ -17,11 +17,6 @@ import java.util.*;
 
 public class RLAgent extends Agent {
 
-
-    // TODO: discount factor
-    // TODO: update weights needs to use old features
-    // TODO: freeze policy
-
     /**
      * Set in the constructor. Defines how many learning episodes your agent should run for.
      * When starting an episode. If the count is greater than this value print a message
@@ -51,7 +46,7 @@ public class RLAgent extends Agent {
     /**
      * Set this to whatever size your feature vector is.
      */
-    public static final int NUM_FEATURES = 4;
+    public static final int NUM_FEATURES = 6;
 
     /** Use this random number generator for your epsilon exploration. When you submit we will
      * change this seed so make sure that your agent works for more than the default seed.
@@ -62,6 +57,7 @@ public class RLAgent extends Agent {
      * Your Q-function weights.
      */
     public double[] weights;
+    private String[] featureNames = {"constant", "footmen attacking", "being attacked", "closest enemy", "health", "weakest enemy"};
 
     private List<Double> currentRewards    = new ArrayList<>();
     private List<Double> evaluationRewards = new ArrayList<>();
@@ -203,19 +199,12 @@ public class RLAgent extends Agent {
         Map<Integer, Action> actions = new HashMap<>();
 
         if (eventOccured(stateView, historyView)) {
-            //System.out.println("Event occured");
 
             // calculate the rewards
             double reward = 0;
             for (int footmanID : myFootmen) {
                 reward += calculateReward(stateView, historyView, footmanID);
             }
-            /*
-            System.out.printf("state:\n");
-            System.out.printf("\tenemy footmen: %d\n", enemyFootmen.size());
-            System.out.printf("\tfriendly footmen: %d\n", myFootmen.size());
-            System.out.printf("\treward: %f\n", reward);
-            */
             currentRewards.add(reward);
 
             // if we are in a testing episode then update the policy
@@ -280,8 +269,8 @@ public class RLAgent extends Agent {
                 averageRewards.add(average(evaluationRewards));
                 evaluationRewards = new ArrayList<>();
                 printTestData(averageRewards);
-                for (double weight : weights) {
-                    System.out.printf("\t %f\n", weight);
+                for (int i = 0; i < weights.length; i++) {
+                    System.out.printf("%-17s: %f\n", featureNames[i], weights[i]);
                 }
             }
         }
@@ -324,7 +313,7 @@ public class RLAgent extends Agent {
             newWeights[i] = oldWeights[i] + learningRate * (totalReward + (gamma * currentQValue) - oldQValue) * oldFeatures[i];
         }
 
-        // System.out.printf("old: %s\nnew: %s\n", Arrays.toString(oldWeights), Arrays.toString(newWeights));
+        // System.out.printf("old: %s\nnew: %s\n\n", Arrays.toString(oldWeights), Arrays.toString(newWeights));
         return newWeights;
     }
 
@@ -524,7 +513,7 @@ public class RLAgent extends Agent {
                                            int attackerId,
                                            int defenderId) {
 
-        double[] featureVector = new double[4];
+        double[] featureVector = new double[6];
         featureVector[0] = .1;
 
         for (Action action : currentActions) {
@@ -538,14 +527,23 @@ public class RLAgent extends Agent {
 
                 // is e attacking me?
                 if (targeted.getUnitId() == defenderId && targeted.getTargetId() == attackerId) {
-                    featureVector[2] = 5;
+                    featureVector[2]++;
                 }
 
                 // is e the closest enemy?
                 if (defenderId == getClosestEnemy(attackerId, stateView,historyView)) {
-                    featureVector[3] = 5;
+                    featureVector[3]++;
                 }
+
             }
+        }
+
+        // how much health do i have?
+        featureVector[4] = (stateView.getUnit(attackerId).getHP() - stateView.getUnit(defenderId).getHP());
+
+        // weakest one
+        if (defenderId == getWeakestEnemy(stateView)) {
+            featureVector[5] += 1;
         }
 
         return featureVector;
@@ -765,6 +763,27 @@ public class RLAgent extends Agent {
     }
 
     /**
+     * returns the id of the weakest enemy
+     * @param stateView the state
+     * @return the id of the weakest enemy
+     */
+    private int getWeakestEnemy(State.StateView stateView) {
+
+        int weakestHealth = Integer.MAX_VALUE;
+        int weakEnemy = enemyFootmen.get(0);
+
+        for (int enemyID : enemyFootmen) {
+            int enemyHealth = stateView.getUnit(enemyID).getHP();
+            if (enemyHealth < weakestHealth) {
+                weakestHealth = enemyHealth;
+                weakEnemy = enemyID;
+            }
+        }
+
+        return weakEnemy;
+    }
+
+    /**
      * Calculates the average of a list of doubles
      * @param numbers the list of doubles
      * @return the average
@@ -776,6 +795,21 @@ public class RLAgent extends Agent {
             average += num;
         }
         return average / numbers.size();
+    }
+
+    /**
+     * sums a list of doubles
+     * @param numbers the numbers to sum
+     * @return the sum of the numbers
+     */
+    private double sum(List<Double> numbers) {
+        double sum = 0;
+
+        for (double num : numbers) {
+            sum += num;
+        }
+
+        return sum;
     }
 
     @Override
