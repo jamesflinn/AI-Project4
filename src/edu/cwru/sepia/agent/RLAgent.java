@@ -17,6 +17,11 @@ import java.util.*;
 
 public class RLAgent extends Agent {
 
+
+    // TODO: discount factor
+    // TODO: update weights needs to use old features
+    // TODO: freeze policy
+
     /**
      * Set in the constructor. Defines how many learning episodes your agent should run for.
      * When starting an episode. If the count is greater than this value print a message
@@ -99,11 +104,11 @@ public class RLAgent extends Agent {
             }
         }
 
+        episodesWon = 0;
         currentEpisode = 1;
         episodesTested = 1;
-        episodesEvaluated = 0;
-        episodesWon = 0;
         testingEpisode = true;
+        episodesEvaluated = 0;
     }
 
     /**
@@ -124,7 +129,7 @@ public class RLAgent extends Agent {
 
         // we have run all the episodes
         if (currentEpisode > numEpisodes) {
-            System.out.printf("current: %d total: %d", currentEpisode, numEpisodes);
+            System.out.printf("current: %d total: %d\n", currentEpisode, numEpisodes);
             System.out.printf("Finished running... \nwon %f of games\nexiting\n", ((double) episodesWon / (double) numEpisodes));
             System.exit(0);
         }
@@ -195,21 +200,24 @@ public class RLAgent extends Agent {
         updateActions(stateView, historyView);
         Map<Integer, Action> actions = new HashMap<>();
 
-        // calculate the rewards
-        double reward = 0;
-        for (int footmanID : myFootmen) {
-            reward = calculateReward(stateView, historyView, footmanID);
-        }
-        currentRewards.add(reward);
-
         if (eventOccured(stateView, historyView)) {
             //System.out.println("Event occured");
 
+            // calculate the rewards
+            double reward = 0;
             for (int footmanID : myFootmen) {
-                // TODO: NOT SURE IF I SHOULD BE CALCULATING THE FEATURE VECTOR HERE
-                // WE NEED THE OLD FEATURES
-                for (int enemyID : enemyFootmen) {
-                    updateWeights(weights, calculateFeatureVector(stateView, historyView, footmanID, enemyID), reward, stateView, historyView, footmanID);
+                reward += calculateReward(stateView, historyView, footmanID);
+            }
+            currentRewards.add(reward);
+
+            // if we are in a testing episode then update the policy
+            if (testingEpisode) {
+                for (int footmanID : myFootmen) {
+                    // TODO: NOT SURE IF I SHOULD BE CALCULATING THE FEATURE VECTOR HERE
+                    // WE NEED THE OLD FEATURES
+                    for (int enemyID : enemyFootmen) {
+                        weights = updateWeights(weights, calculateFeatureVector(stateView, historyView, footmanID, enemyID), reward, stateView, historyView, footmanID);
+                    }
                 }
             }
 
@@ -220,8 +228,8 @@ public class RLAgent extends Agent {
             }
 
         } else if (stateView.getTurnNumber() == 0) {
-
             // First turn give everyone an action
+
             for (int footmanID : myFootmen) {
                 Action action = Action.createCompoundAttack(footmanID, selectAction(stateView, historyView, footmanID));
                 actions.put(footmanID, action);
@@ -273,10 +281,6 @@ public class RLAgent extends Agent {
             episodesWon++;
         }
 
-        if (currentEpisode > 649) {
-
-            System.out.println("h");
-        }
         // Save your weights
         saveWeights(weights);
 
@@ -364,8 +368,9 @@ public class RLAgent extends Agent {
         int victim  = enemyFootmen.get(0);
 
         if (Math.random() < epsilon) {
-            // do random shit
-            victim = (int)(Math.random() * enemyFootmen.size());
+            // do random stuff
+            int victimIndex = (int)(Math.random() * enemyFootmen.size());
+            victim = enemyFootmen.get(victimIndex);
         } else {
 
             double maxQVal = Integer.MIN_VALUE;
@@ -376,7 +381,7 @@ public class RLAgent extends Agent {
                 double[] featureVector = calculateFeatureVector(stateView, historyView, attackerId, enemyID);
                 double newQVal = calcQValue(stateView, historyView, attackerId, enemyID);
                 if (newQVal > maxQVal) {
-                    victim = enemyID;
+                    victim  = enemyID;
                     maxQVal = newQVal;
                 }
             }
@@ -504,7 +509,7 @@ public class RLAgent extends Agent {
                                            int defenderId) {
 
         double[] featureVector = new double[4];
-        featureVector[0] = 1;
+        featureVector[0] = 0;
 
         for (Action action : currentActions) {
             if (action instanceof TargetedAction) {
@@ -522,7 +527,7 @@ public class RLAgent extends Agent {
 
                 // is e the closest enemy?
                 if (defenderId == getClosestEnemy(attackerId, stateView,historyView)) {
-                    featureVector[3] = 10;
+                    featureVector[3] = 5;
                 }
             }
         }
