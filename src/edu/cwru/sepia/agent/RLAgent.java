@@ -285,8 +285,11 @@ public class RLAgent extends Agent {
                 for (int i = 0; i < weights.length; i++) {
                     System.out.printf("%-17s: %f\n", featureNames[i], weights[i]);
                 }
-                if (averageRewards.get(averageRewards.size()) > bestReward) {
+                if (averageRewards.get(averageRewards.size() - 1) > bestReward) {
+                    bestReward = averageRewards.get(averageRewards.size() - 1);
                     bestWeights = weights;
+                    saveBestWeights(bestWeights);
+
                 }
             }
         }
@@ -710,7 +713,7 @@ public class RLAgent extends Agent {
             // open a new file writer. Set append to false
             BufferedWriter writer = new BufferedWriter(new FileWriter(path, false));
 
-            for (double weight : bestWeights) {
+            for (double weight : weights) {
                 writer.write(String.format("%f\n", weight));
             }
             writer.flush();

@@ -3,6 +3,7 @@ out/
 saves/
 agent_weights/
 LoserAgent.java
+results.csv
 
 .DS_STORE
 *.iml

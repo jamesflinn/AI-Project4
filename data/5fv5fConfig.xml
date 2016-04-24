@@ -6,7 +6,7 @@
 			<!-- You can change the values of these arguments. The first number is the amount of episodes
 			you should run. If the current episode number is greater than this you should call sys.exit -->
 			<Argument>1000</Argument> <!-- Number of episodes to learn -->
-			<Argument>false</Argument> <!-- If true then will attempt to load the weights file in the constructor -->
+			<Argument>true</Argument> <!-- If true then will attempt to load the weights file in the constructor -->
 		</AgentClass>
 	</Player>
 
@@ -26,7 +26,7 @@
 
 	<Player Id="1">
 		<AgentClass>
-			<ClassName>edu.cwru.sepia.agent.LoserAgent</ClassName>
+			<ClassName>combatAgent</ClassName>
 			<Argument>1000</Argument>
 			<Argument>false</Argument> <!-- Verbosity of combat agent -->
 		</AgentClass>
