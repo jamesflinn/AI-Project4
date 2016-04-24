@@ -100,7 +100,7 @@ public class RLAgent extends Agent {
         }
 
         currentEpisode = 1;
-        episodesTested = 0;
+        episodesTested = 1;
         episodesEvaluated = 0;
         episodesWon = 0;
         testingEpisode = true;
@@ -112,7 +112,7 @@ public class RLAgent extends Agent {
     @Override
     public Map<Integer, Action> initialStep(State.StateView stateView, History.HistoryView historyView) {
 
-        //System.out.printf("episode %4d is a %10s episode\n", currentEpisode, testingEpisode ? "testing" : "evaluation");
+        // System.out.printf("episode %4d is a %10s episode\n", currentEpisode, testingEpisode ? "testing" : "evaluation");
         // You will need to add code to check if you are in a testing or learning episode
         if (episodesTested > 9) {
             testingEpisode = false;
@@ -124,6 +124,7 @@ public class RLAgent extends Agent {
 
         // we have run all the episodes
         if (currentEpisode > numEpisodes) {
+            System.out.printf("current: %d total: %d", currentEpisode, numEpisodes);
             System.out.printf("Finished running... \nwon %f of games\nexiting\n", ((double) episodesWon / (double) numEpisodes));
             System.exit(0);
         }
@@ -272,6 +273,10 @@ public class RLAgent extends Agent {
             episodesWon++;
         }
 
+        if (currentEpisode > 649) {
+
+            System.out.println("h");
+        }
         // Save your weights
         saveWeights(weights);
 
