@@ -375,7 +375,7 @@ public class RLAgent extends Agent {
         Unit.UnitView attacker = stateView.getUnit(attackerId);
         int victim  = enemyFootmen.get(0);
 
-        if (random.nextDouble() < epsilon) {
+        if (testingEpisode && random.nextDouble() < epsilon) {
             // do random stuff
             int victimIndex = (int)(Math.random() * enemyFootmen.size());
             victim = enemyFootmen.get(victimIndex);
