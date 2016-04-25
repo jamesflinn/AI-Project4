@@ -136,6 +136,7 @@ public class RLAgent extends Agent {
 
         // we have run all the episodes
         if (currentEpisode > numEpisodes) {
+            printTestData(averageRewards);
             System.out.printf("\ncurrent: %d total: %d\n", currentEpisode, numEpisodes);
             System.out.printf("Finished running... \nwon %f of games\nexiting\n", ((double) episodesWon / (double) numEpisodes));
 
@@ -273,6 +274,10 @@ public class RLAgent extends Agent {
         double sumRewards = sum(currentRewards);
         allRewards.add(sumRewards);
 
+        if (stateView.getUnits(0).size() > stateView.getUnits(1).size()) {
+            episodesWon++;
+        }
+
         if (testingEpisode) {
             episodesTested++;
         } else {
@@ -284,11 +289,12 @@ public class RLAgent extends Agent {
             if (episodesEvaluated > 4) {
                 averageRewards.add(average(evaluationRewards));
                 evaluationRewards = new ArrayList<>();
-                printTestData(averageRewards);
 
+                /*
                 for (int i = 0; i < weights.length; i++) {
                     System.out.printf("%-17s: %f\n", featureNames[i], weights[i]);
                 }
+                */
 
                 if (averageRewards.get(averageRewards.size() - 1) > bestReward) {
                     bestReward = averageRewards.get(averageRewards.size() - 1);
@@ -298,9 +304,8 @@ public class RLAgent extends Agent {
             }
         }
 
-        if (stateView.getUnits(0).size() > stateView.getUnits(1).size()) {
-            episodesWon++;
-        }
+        System.out.printf("won %d out of %d games: %.2f%s                            \r",
+                episodesWon,  currentEpisode, ((double) episodesWon / (double) currentEpisode) * 100, "%");
 
         saveWeights(weights);
     }
@@ -535,7 +540,7 @@ public class RLAgent extends Agent {
 
                 // how many other footmen are attacking e?
                 if (targeted.getTargetId() == defenderId) {
-                    featureVector[NUM_ATTACKING_FOOTMEN_FEATURE]++;
+                    featureVector[NUM_ATTACKING_FOOTMEN_FEATURE]+=2;
                 }
 
                 // is e attacking me?
@@ -543,11 +548,12 @@ public class RLAgent extends Agent {
                     featureVector[BEING_ATTACKED_FEATURE]++;
                 }
 
-                // is e the closest enemy?
-                if (defenderId == getClosestEnemy(attackerId, stateView)) {
-                    featureVector[CLOSEST_ENEMY_FEATURE]++;
-                }
             }
+        }
+
+        // is e the closest enemy?
+        if (defenderId == getClosestEnemy(attackerId, stateView)) {
+            featureVector[CLOSEST_ENEMY_FEATURE] += 10;
         }
 
         // how much health do i have?
@@ -555,7 +561,7 @@ public class RLAgent extends Agent {
 
         // weakest one
         if (defenderId == getWeakestEnemy(stateView)) {
-            featureVector[WEAKEST_ENEMY_FEATURE] += 1;
+            featureVector[WEAKEST_ENEMY_FEATURE]++;
         }
 
         return featureVector;
