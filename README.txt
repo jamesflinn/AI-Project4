@@ -33,4 +33,4 @@ VICTIM_HEALTH_FEATURE:
     from dying.
 
 Our agent tends to win 60% of the time in the 5v5 scenario with 1000 runs and 95% of the time in the 10v10 scenario with
-1000 runs. As the number of runs goes up the agent tends to win more.
+1000 runs.
