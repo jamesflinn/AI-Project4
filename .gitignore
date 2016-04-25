@@ -3,7 +3,9 @@ out/
 saves/
 agent_weights/
 LoserAgent.java
+EricAgent.java
 results.csv
+CartesianProduct.java
 
 .DS_STORE
 *.iml

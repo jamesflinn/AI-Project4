@@ -47,6 +47,11 @@ public class RLAgent extends Agent {
      * Set this to whatever size your feature vector is.
      */
     public static final int NUM_FEATURES = 6;
+    public static final int NUM_ATTACKING_FOOTMEN_FEATURE = 1;
+    public static final int BEING_ATTACKED_FEATURE = 2;
+    public static final int CLOSEST_ENEMY_FEATURE = 3;
+    public static final int HEALTH_FEATURE = 4;
+    public static final int WEAKEST_ENEMY_FEATURE = 5;
 
     /** Use this random number generator for your epsilon exploration. When you submit we will
      * change this seed so make sure that your agent works for more than the default seed.
@@ -58,7 +63,8 @@ public class RLAgent extends Agent {
      */
     public double[] weights;
     private double[] bestWeights;
-    private String[] featureNames = {"constant", "footmen attacking", "being attacked", "closest enemy", "health", "weakest enemy"};
+    private String[] featureNames = {"constant", "footmen attacking", "being attacked", "closest enemy",
+                                     "health", "weakest enemy", "friendlies", "enemies"};
 
     // Rewards
     private List<Double> allRewards        = new ArrayList<>();
@@ -297,7 +303,7 @@ public class RLAgent extends Agent {
         //System.out.printf("episode %4d %4s\n", currentEpisode, myFootmen.size() > enemyFootmen.size() ? "won" : "lost");
         //System.out.printf("\t%d events occured\n", currentRewards.size());
 
-        if (myFootmen.size() > enemyFootmen.size()) {
+        if (stateView.getUnits(0).size() > stateView.getUnits(1).size()) {
             episodesWon++;
         }
 
@@ -532,7 +538,7 @@ public class RLAgent extends Agent {
                                            int attackerId,
                                            int defenderId) {
 
-        double[] featureVector = new double[6];
+        double[] featureVector = new double[8];
         featureVector[0] = .1;
 
         for (Action action : currentActions) {
@@ -541,28 +547,28 @@ public class RLAgent extends Agent {
 
                 // how many other footmen are attacking e?
                 if (targeted.getTargetId() == defenderId) {
-                    featureVector[1]++;
+                    featureVector[NUM_ATTACKING_FOOTMEN_FEATURE]++;
                 }
 
                 // is e attacking me?
                 if (targeted.getUnitId() == defenderId && targeted.getTargetId() == attackerId) {
-                    featureVector[2]++;
+                    featureVector[BEING_ATTACKED_FEATURE]++;
                 }
 
                 // is e the closest enemy?
                 if (defenderId == getClosestEnemy(attackerId, stateView,historyView)) {
-                    featureVector[3]++;
+                    featureVector[CLOSEST_ENEMY_FEATURE]++;
                 }
 
             }
         }
 
         // how much health do i have?
-        featureVector[4] = (stateView.getUnit(attackerId).getHP() - stateView.getUnit(defenderId).getHP());
+        featureVector[HEALTH_FEATURE] = (stateView.getUnit(attackerId).getHP() - stateView.getUnit(defenderId).getHP());
 
         // weakest one
         if (defenderId == getWeakestEnemy(stateView)) {
-            featureVector[5] += 1;
+            featureVector[WEAKEST_ENEMY_FEATURE] += 1;
         }
 
         return featureVector;
