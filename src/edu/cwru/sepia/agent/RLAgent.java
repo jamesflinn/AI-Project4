@@ -45,12 +45,13 @@ public class RLAgent extends Agent {
     /**
      * Set this to whatever size your feature vector is.
      */
-    public static final int NUM_FEATURES = 6;
+    public static final int NUM_FEATURES = 7;
     public static final int NUM_ATTACKING_FOOTMEN_FEATURE = 1;
     public static final int BEING_ATTACKED_FEATURE = 2;
     public static final int CLOSEST_ENEMY_FEATURE = 3;
     public static final int HEALTH_FEATURE = 4;
     public static final int WEAKEST_ENEMY_FEATURE = 5;
+    public static final int VICTIM_HEALTH_FEATURE = 6;
 
     /** Use this random number generator for your epsilon exploration. When you submit we will
      * change this seed so make sure that your agent works for more than the default seed.
@@ -63,7 +64,7 @@ public class RLAgent extends Agent {
     public double[] weights;
     private double[] bestWeights;
     private String[] featureNames = {"constant", "footmen attacking", "being attacked", "closest enemy",
-                                     "health", "weakest enemy", "friendlies", "enemies"};
+                                     "health", "weakest enemy", "victim health"};
 
     // Rewards
     private List<Double> allRewards        = new ArrayList<>();
@@ -135,7 +136,7 @@ public class RLAgent extends Agent {
         }
 
         // we have run all the episodes
-        if (currentEpisode > numEpisodes) {
+        if (currentEpisode >= numEpisodes) {
             printTestData(averageRewards);
             System.out.printf("\ncurrent: %d total: %d\n", currentEpisode, numEpisodes);
             System.out.printf("Finished running... \nwon %f of games\nexiting\n", ((double) episodesWon / (double) numEpisodes));
@@ -291,9 +292,11 @@ public class RLAgent extends Agent {
                 evaluationRewards = new ArrayList<>();
 
                 /*
+                System.out.println();
                 for (int i = 0; i < weights.length; i++) {
                     System.out.printf("%-17s: %f\n", featureNames[i], weights[i]);
                 }
+                System.out.println();
                 */
 
                 if (averageRewards.get(averageRewards.size() - 1) > bestReward) {
@@ -531,7 +534,7 @@ public class RLAgent extends Agent {
                                            int attackerId,
                                            int defenderId) {
 
-        double[] featureVector = new double[8];
+        double[] featureVector = new double[NUM_FEATURES];
         featureVector[0] = .1;
 
         for (Action action : currentActions) {
@@ -546,6 +549,14 @@ public class RLAgent extends Agent {
                 // is e attacking me?
                 if (targeted.getUnitId() == defenderId && targeted.getTargetId() == attackerId) {
                     featureVector[BEING_ATTACKED_FEATURE]++;
+                }
+
+                // health of the enemies victim
+                if (targeted.getUnitId() == defenderId) {
+                    UnitView victim = stateView.getUnit(targeted.getTargetId());
+                    if (victim != null) {
+                        featureVector[VICTIM_HEALTH_FEATURE] = stateView.getUnit(targeted.getTargetId()).getHP();
+                    }
                 }
 
             }
@@ -773,9 +784,17 @@ public class RLAgent extends Agent {
 
         currentActions = new ArrayList<>();
 
-        Map<Integer, ActionResult> actionResults = historyView.getCommandFeedback(playernum, stateView.getTurnNumber() - 1);
-        for (ActionResult result : actionResults.values()) {
-            if (!result.equals(ActionFeedback.COMPLETED)) {
+        Map<Integer, ActionResult> myActionResults = historyView.getCommandFeedback(playernum, stateView.getTurnNumber() - 1);
+        Map<Integer, ActionResult> enemyActionResults = historyView.getCommandFeedback(ENEMY_PLAYERNUM, stateView.getTurnNumber() - 1);
+
+        for (ActionResult result : myActionResults.values()) {
+            if (!result.getFeedback().equals(ActionFeedback.COMPLETED)) {
+                currentActions.add(result.getAction());
+            }
+        }
+
+        for (ActionResult result : enemyActionResults.values()) {
+            if (!result.getFeedback().equals(ActionFeedback.COMPLETED)) {
                 currentActions.add(result.getAction());
             }
         }
