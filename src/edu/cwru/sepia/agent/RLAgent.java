@@ -1,6 +1,5 @@
 package edu.cwru.sepia.agent;
 
-import com.sun.glass.ui.EventLoop;
 import edu.cwru.sepia.action.Action;
 import edu.cwru.sepia.action.ActionFeedback;
 import edu.cwru.sepia.action.ActionResult;
@@ -209,7 +208,7 @@ public class RLAgent extends Agent {
     @Override
     public Map<Integer, Action> middleStep(State.StateView stateView, History.HistoryView historyView) {
 
-        // remove dead footmen
+        // update the footmen and actions
         updateFootmenList(myFootmen, stateView, historyView);
         updateFootmenList(enemyFootmen, stateView, historyView);
         updateActions(stateView, historyView);
@@ -227,8 +226,6 @@ public class RLAgent extends Agent {
             // if we are in a testing episode then update the policy
             if (testingEpisode) {
                 for (int footmanID : myFootmen) {
-                    // TODO: NOT SURE IF I SHOULD BE CALCULATING THE FEATURE VECTOR HERE
-                    // WE NEED THE OLD FEATURES
                     double[] featureValues = convertToPrimitiveArray(previousFeatureValues.get(footmanID));
                     weights = updateWeights(weights, featureValues, reward, stateView, historyView, footmanID);
                 }
@@ -288,28 +285,24 @@ public class RLAgent extends Agent {
                 averageRewards.add(average(evaluationRewards));
                 evaluationRewards = new ArrayList<>();
                 printTestData(averageRewards);
+
                 for (int i = 0; i < weights.length; i++) {
                     System.out.printf("%-17s: %f\n", featureNames[i], weights[i]);
                 }
+
                 if (averageRewards.get(averageRewards.size() - 1) > bestReward) {
                     bestReward = averageRewards.get(averageRewards.size() - 1);
                     bestWeights = weights;
                     saveBestWeights(bestWeights);
-
                 }
             }
         }
-
-        //System.out.printf("episode %4d %4s\n", currentEpisode, myFootmen.size() > enemyFootmen.size() ? "won" : "lost");
-        //System.out.printf("\t%d events occured\n", currentRewards.size());
 
         if (stateView.getUnits(0).size() > stateView.getUnits(1).size()) {
             episodesWon++;
         }
 
-        // Save your weights
         saveWeights(weights);
-
     }
 
     /**
@@ -338,7 +331,6 @@ public class RLAgent extends Agent {
             newWeights[i] = oldWeights[i] + learningRate * (totalReward + (gamma * currentQValue) - oldQValue) * oldFeatures[i];
         }
 
-        // System.out.printf("old: %s\nnew: %s\n\n", Arrays.toString(oldWeights), Arrays.toString(newWeights));
         return newWeights;
     }
 
@@ -351,8 +343,6 @@ public class RLAgent extends Agent {
     private double dotProduct(double[] weights, double[] features) {
         double product = 0;
 
-        //System.out.println("dotProduct:");
-        //System.out.printf("\t%d weights\n\t%d features", weights.length, features.length);
         for (int i = 0; i < weights.length; i++) {
             product += (weights[i] * features[i]);
         }
@@ -391,13 +381,13 @@ public class RLAgent extends Agent {
      */
     public int selectAction(State.StateView stateView, History.HistoryView historyView, int attackerId) {
 
-        Unit.UnitView attacker = stateView.getUnit(attackerId);
-        int victim  = enemyFootmen.get(0);
+        int victim = enemyFootmen.get(0);
 
         if (random.nextDouble() < epsilon) {
             // do random stuff
             int victimIndex = (int)(Math.random() * enemyFootmen.size());
             victim = enemyFootmen.get(victimIndex);
+
         } else {
 
             double maxQVal = Integer.MIN_VALUE;
@@ -411,11 +401,12 @@ public class RLAgent extends Agent {
                     maxQVal = newQVal;
                 }
             }
+
         }
 
         double[] featureVector = calculateFeatureVector(stateView, historyView, attackerId,  victim);
-        //System.out.println(Arrays.toString(featureVector));
         previousFeatureValues.put(attackerId, convertToObjectArray(featureVector));
+
         return victim;
     }
 
@@ -517,15 +508,12 @@ public class RLAgent extends Agent {
     }
 
     /**
-     * Given a state and action calculate your features here. Please include a comment explaining what features
-     * you chose and why you chose them.
-     *
-     * All of your feature functions should evaluate to a double. Collect all of these into an array. You will
-     * take a dot product of this array with the weights array to get a Q-value for a given state action.
-     *
-     * It is a good idea to make the first value in your array a constant. This just helps remove any offset
-     * from 0 in the Q-function. The other features are up to you. Many are suggested in the assignment
-     * description.
+     * Features Description
+     * NUM_ATTACKING_FOOTMEN: the number of footment attacking the victim
+     * BEING_ATTACKED: If this footman is being attacked by the victim
+     * CLOSEST_ENEMY: If this enemy is the closest
+     * HEALTH: difference in health between the units
+     * WEAKEST_ENEMY: If this is the enemy with the least health
      *
      * @param stateView   Current state of the SEPIA game
      * @param historyView History of the game up until this turn
@@ -556,10 +544,9 @@ public class RLAgent extends Agent {
                 }
 
                 // is e the closest enemy?
-                if (defenderId == getClosestEnemy(attackerId, stateView,historyView)) {
+                if (defenderId == getClosestEnemy(attackerId, stateView)) {
                     featureVector[CLOSEST_ENEMY_FEATURE]++;
                 }
-
             }
         }
 
@@ -710,6 +697,10 @@ public class RLAgent extends Agent {
         return null;
     }
 
+    /**
+     * Saves weights to the bestweights.data file
+     * @param weights the weights to save
+     */
     public void saveBestWeights(double[] weights) {
         File path = new File("agent_weights/bestweights.data");
         // create the directories if they do not already exist
@@ -788,14 +779,14 @@ public class RLAgent extends Agent {
      * returns the closest enemyID to the given footman
      * @param footman     the footman we are looking from
      * @param stateView   the current state
-     * @param historyView the history
      * @return the ID of the closest enemy
      */
-    private int getClosestEnemy(int footman, State.StateView stateView, History.HistoryView historyView) {
+    private int getClosestEnemy(int footman, State.StateView stateView) {
 
         int closestEnemy = enemyFootmen.get(0);
         int closestDistance = 10000;
         int enemyDistance;
+
         for (int enemy : enemyFootmen) {
             enemyDistance = chebyshev(stateView.getUnit(footman), stateView.getUnit(enemy));
             if (enemyDistance < closestDistance) {
@@ -856,6 +847,10 @@ public class RLAgent extends Agent {
         return sum;
     }
 
+    /**
+     * Saves the rewards to a .csv file
+     * @throws IOException if there is a problem writing
+     */
     private void saveToCSV() throws IOException {
         FileWriter fileWriter = new FileWriter("results.csv");
         fileWriter.write("iteration, cumulative reward\n");
