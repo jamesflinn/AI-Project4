@@ -138,8 +138,7 @@ public class RLAgent extends Agent {
         // we have run all the episodes
         if (currentEpisode >= numEpisodes) {
             printTestData(averageRewards);
-            System.out.printf("\ncurrent: %d total: %d\n", currentEpisode, numEpisodes);
-            System.out.printf("Finished running... \nwon %f of games\nexiting\n", ((double) episodesWon / (double) numEpisodes));
+            System.out.printf("Finished running... \nwon %.2f of games\nexiting\n", ((double) episodesWon / (double) numEpisodes) * 100);
 
             try {
                 saveToCSV();
